@@ -1,9 +1,7 @@
-
-
-
 # Import necessary libraries
 from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments
-from datasets import load_dataset
+import pandas as pd
+from datasets import Dataset
 
 # Load tokenizer and model
 model_name = "distilgpt2"  # Replace with your specific model if needed
@@ -14,10 +12,16 @@ model = AutoModelForCausalLM.from_pretrained(model_name)
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
-# Function to load and tokenize the custom dataset
+# Function to load and tokenize the custom dataset from CSV
 def load_custom_dataset(file_path, tokenizer, block_size=128):
-    # Load the text dataset
-    dataset = load_dataset("text", data_files={"train": file_path}, split="train")
+    # Load the dataset from CSV file
+    df = pd.read_csv(file_path)
+
+    # Combine questions and answers into a single text column for training
+    df['text'] = df.apply(lambda row: f"User: {row['question']}\nAssistant: {row['answer']}", axis=1)
+
+    # Convert to Hugging Face Dataset
+    dataset = Dataset.from_pandas(df[['text']])
     
     # Tokenize and add labels
     def tokenize_function(examples):
@@ -36,7 +40,7 @@ def load_custom_dataset(file_path, tokenizer, block_size=128):
     return dataset
 
 # Load your custom dataset with labels
-file_path = "db.txt"  # Replace with your actual file path
+file_path = "db.csv"  # Replace with your actual CSV file path
 train_dataset = load_custom_dataset(file_path, tokenizer)
 
 # Define training arguments
